@@ -12,7 +12,7 @@ pipeline {
         ECS_SERVICE    = 'netflix-static-service'
         TASK_FAMILY    = 'netflix-static-task'
         CONTAINER_PORT = '5000'
-        EXTERNAL_ID    = 'jenkins-netflix-static-deploy'
+        EXTERNAL_ID    = 'netflix-flask-website'
     }
 
     options {
