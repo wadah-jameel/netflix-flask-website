@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}FlixApp — Home{% endblock %}
+
+{% block content %}
+
+<!-- Hero Banner -->
+<section class="hero" style="background: radial-gradient(ellipse at center, {{ hero.banner_color }} 0%, #000 100%);">
+    <div class="hero-content">
+        <div class="hero-badge">{{ hero.genre }}</div>
+        <h1 class="hero-title">{{ hero.title }}</h1>
+        <div class="hero-meta">
+            <span class="hero-rating">⭐ {{ hero.rating }}</span>
+            <span>{{ hero.year }}</span>
+            <span>{{ hero.duration }}</span>
+        </div>
+        <p class="hero-desc">{{ hero.description }}</p>
+        <div class="hero-actions">
+            <a href="/movie/{{ hero.id }}" class="btn-watch">▶ Watch Now</a>
+            <button class="btn-info"
+                onclick="openModal(
+                    '{{ hero.title }}',
+                    '{{ hero.description }}',
+                    '{{ hero.genre }}',
+                    '{{ hero.year }}',
+                    '{{ hero.rating }}',
+                    '{{ hero.duration }}',
+                    {{ hero.tags | tojson }},
+                    {{ hero.id }},
+                    '{{ hero.banner_color }}'
+                )">ℹ More Info</button>
+        </div>
+    </div>
+    <div class="hero-fade"></div>
+</section>
+
+<!-- Genre Rows -->
+{% for genre, movies in genres.items() %}
+<section class="genre-section">
+    <h2 class="genre-title">{{ genre }}</h2>
+    <div class="movie-row" id="row-{{ loop.index }}">
+        {% for movie in movies %}
+<div class="movie-card"
+     onclick="openModal(
+         '{{ movie.title }}',
+         '{{ movie.description }}',
+         '{{ movie.genre }}',
+         '{{ movie.year }}',
+         '{{ movie.rating }}',
+         '{{ movie.duration }}',
+         {{ movie.tags | tojson }},
+         {{ movie.id }},
+         '{{ movie.banner_color }}',
+         '{{ movie.poster }}'
+     )">
+    <!-- Poster image -->
+    <img src="https://picsum.photos/seed/movie{{ movie.id }}/300/450"
+     alt="{{ movie.title }}"
+     class="card-poster">
+    <div class="card-content">
+        <div class="card-genre-badge">{{ movie.genre }}</div>
+        <div class="card-title">{{ movie.title }}</div>
+        <div class="card-year">{{ movie.year }}</div>
+    </div>
+    <div class="card-hover-overlay">
+        <div class="card-hover-title">{{ movie.title }}</div>
+        <div class="card-hover-rating">⭐ {{ movie.rating }}</div>
+        <div class="card-hover-duration">{{ movie.duration }}</div>
+        <div class="card-hover-actions">
+            <button class="btn-play-sm">▶ Play</button>
+            <button class="btn-info-sm">ℹ Info</button>
+        </div>
+        <div class="card-hover-tags">
+            {% for tag in movie.tags %}
+            <span class="tag">{{ tag }}</span>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+        {% endfor %}
+    </div>
+</section>
+{% endfor %}
+
+{% endblock %}

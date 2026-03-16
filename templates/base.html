@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}FlixApp{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+<nav class="navbar" id="navbar">
+    <a href="/" class="nav-logo">🎬 FLIXAPP</a>
+    <div class="nav-links">
+        <a href="/">Home</a>
+        <a href="#">Movies</a>
+        <a href="#">TV Shows</a>
+        <a href="#">My List</a>
+    </div>
+</nav>
+
+{% block content %}{% endblock %}
+
+<!-- Movie Detail Modal -->
+<div class="modal-overlay" id="modalOverlay">
+    <div class="modal" id="movieModal">
+        <button class="modal-close" id="modalClose">✕</button>
+        <div class="modal-hero" id="modalHero"></div>
+        <div class="modal-body">
+            <h2 id="modalTitle"></h2>
+            <div class="modal-meta" id="modalMeta"></div>
+            <p id="modalDesc"></p>
+            <div class="modal-tags" id="modalTags"></div>
+            <a id="modalLink" href="#" class="btn-watch">▶ Watch Now</a>
+        </div>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

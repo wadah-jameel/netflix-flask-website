@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}{{ movie.title }} — FlixApp{% endblock %}
+
+{% block content %}
+
+<div class="detail-page">
+
+    <!-- Detail Hero -->
+    <div class="detail-hero"
+         style="background: radial-gradient(ellipse at top, {{ movie.banner_color }} 0%, #000 70%);">
+<div class="detail-hero-content">
+    <div class="detail-layout">
+        <img src="https://picsum.photos/seed/movie{{ movie.id }}/300/450"
+             alt="{{ movie.title }}"
+             class="detail-poster"
+             onerror="this.style.display='none'">
+        <div class="detail-info">
+            <div class="detail-badge">{{ movie.genre }}</div>
+            <h1>{{ movie.title }}</h1>
+            <div class="detail-meta">
+                <span class="star-rating">⭐ {{ movie.rating }}</span>
+                <span>{{ movie.year }}</span>
+                <span>{{ movie.duration }}</span>
+            </div>
+            <p class="detail-desc">{{ movie.description }}</p>
+            <div class="detail-tags">
+                {% for tag in movie.tags %}
+                <span class="tag">{{ tag }}</span>
+                {% endfor %}
+            </div>
+            <div class="detail-actions">
+                <button class="btn-watch">▶ Watch Now</button>
+                <button class="btn-info">＋ My List</button>
+                <a href="/" class="btn-back">← Back</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+    <!-- Similar Movies -->
+    {% if similar %}
+    <section class="genre-section">
+        <h2 class="genre-title">More Like This</h2>
+        <div class="movie-row">
+            {% for m in similar %}
+            <div class="movie-card"
+                 style="background: linear-gradient(135deg, {{ m.card_color }}, #000);"
+                 onclick="window.location='/movie/{{ m.id }}'">
+                <div class="card-content">
+                    <div class="card-genre-badge">{{ m.genre }}</div>
+                    <div class="card-title">{{ m.title }}</div>
+                    <div class="card-year">{{ m.year }}</div>
+                </div>
+                <div class="card-hover-overlay">
+                    <div class="card-hover-title">{{ m.title }}</div>
+                    <div class="card-hover-rating">⭐ {{ m.rating }}</div>
+                    <div class="card-hover-duration">{{ m.duration }}</div>
+                    <div class="card-hover-actions">
+                        <button class="btn-play-sm">▶ Play</button>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+</div>
+
+{% endblock %}
