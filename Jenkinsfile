@@ -71,9 +71,7 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 echo "🐳 Building ${IMAGE_URI}"
-                sh """
-                    DOCKER_DEFAULT_PLATFORM=linux/amd64 docker build -t ${IMAGE_URI} .
-                """
+                sh "docker build -t ${IMAGE_URI} ."
             }
         }
 
@@ -115,7 +113,7 @@ pipeline {
                     def accountId     = env.AWS_ACCOUNT_ID
 
                     def containerDef = """[
-                        {
+                      {
                             "name": "${ecrRepo}",
                             "image": "${imageUri}",
                             "portMappings": [
@@ -129,18 +127,25 @@ pipeline {
                                     "name": "FLASK_ENV",
                                     "value": "production"
                                 }
-                            ]
-
+                            ],
                             "healthCheck": {
                                 "command": [
                                     "CMD-SHELL",
-                                    "python3 -c \"import urllib.request; urllib.request.urlopen('http://localhost:5000/health')\" || exit 1"
+                                    "python3 -c \\"import urllib.request; urllib.request.urlopen('http://localhost:5000/health')\\" || exit 1"
                                 ],
                                 "interval": 30,
                                 "timeout": 5,
                                 "retries": 3,
                                 "startPeriod": 15
                             },
+                            "logConfiguration": {
+                                "logDriver": "awslogs",
+                                "options": {
+                                    "awslogs-group": "/ecs/${taskFamily}",
+                                    "awslogs-region": "${awsRegion}",
+                                    "awslogs-stream-prefix": "ecs"
+                                }
+                            }
                         }
                     ]"""
 
@@ -177,6 +182,7 @@ print('✅ Container definition JSON is valid')
                             --cpu 256 \
                             --memory 512 \
                             --execution-role-arn arn:aws:iam::${accountId}:role/ecsTaskExecutionRole \
+                            --runtime-platform "cpuArchitecture=ARM64,operatingSystemFamily=LINUX" \
                             --container-definitions file://container-definitions.json \
                             --region ${awsRegion} \
                             --query 'taskDefinition.taskDefinitionArn' \
