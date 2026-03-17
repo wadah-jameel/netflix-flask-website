@@ -1,4 +1,5 @@
-FROM python:3.12-slim
+# Force AMD64 architecture — required for ECS Fargate
+FROM --platform=linux/amd64 python:3.12-slim
 
 # Install curl for ECS health checks
 RUN apt-get update \
