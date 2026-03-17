@@ -17,7 +17,7 @@ pipeline {
 
     options {
         buildDiscarder(logRotator(numToKeepStr: '10'))
-        timeout(time: 30, unit: 'MINUTES')
+        timeout(time: 60, unit: 'MINUTES')
         disableConcurrentBuilds()
     }
 
@@ -78,7 +78,6 @@ pipeline {
         stage('Push to ECR') {
             steps {
                 sh """
-                    # Create ECR repo if it doesn't exist
                     aws ecr describe-repositories \
                         --repository-names ${ECR_REPO} \
                         --region ${AWS_REGION} 2>/dev/null || \
@@ -87,15 +86,12 @@ pipeline {
                         --region ${AWS_REGION} \
                         --image-scanning-configuration scanOnPush=true
 
-                    # Authenticate Docker with ECR
                     aws ecr get-login-password --region ${AWS_REGION} \
                         | docker login --username AWS \
                           --password-stdin ${ECR_REGISTRY}
 
-                    # Push commit-tagged image
                     docker push ${IMAGE_URI}
 
-                    # Also tag and push as latest
                     docker tag  ${IMAGE_URI} ${ECR_REGISTRY}/${ECR_REPO}:latest
                     docker push ${ECR_REGISTRY}/${ECR_REPO}:latest
 
@@ -116,7 +112,6 @@ pipeline {
                     def awsRegion     = env.AWS_REGION
                     def accountId     = env.AWS_ACCOUNT_ID
 
-                    // Write container definitions to a file — avoids all JSON escaping issues
                     def containerDef = """[
                         {
                             "name": "${ecrRepo}",
@@ -156,7 +151,6 @@ pipeline {
 
                     writeFile file: 'container-definitions.json', text: containerDef
 
-                    // Validate JSON before sending to AWS
                     sh '''
                         python3 -c "
 import json
@@ -167,12 +161,10 @@ print('✅ Container definition JSON is valid')
                     '''
 
                     sh """
-                        # Create CloudWatch log group if it doesn't exist
                         aws logs create-log-group \
                             --log-group-name /ecs/${taskFamily} \
                             --region ${awsRegion} 2>/dev/null || true
 
-                        # Create ECS cluster if it doesn't exist
                         aws ecs describe-clusters \
                             --clusters ${ecsCluster} \
                             --region ${awsRegion} \
@@ -197,7 +189,6 @@ print('✅ Container definition JSON is valid')
 
                         echo "✅ Task definition: \$TASK_DEF_ARN"
 
-                        # Check if service exists
                         SERVICE_EXISTS=\$(aws ecs describe-services \
                             --cluster ${ecsCluster} \
                             --services ${ecsService} \
@@ -208,14 +199,12 @@ print('✅ Container definition JSON is valid')
                         if [ -z "\$SERVICE_EXISTS" ]; then
                             echo "🆕 Service not found — creating it..."
 
-                            # Get default VPC subnet and security group
                             SUBNET_ID=\$(aws ec2 describe-subnets \
                                 --filters Name=defaultForAz,Values=true \
                                 --query 'Subnets[0].SubnetId' \
                                 --output text \
                                 --region ${awsRegion})
 
-                            # Check if security group already exists
                             SG_ID=\$(aws ec2 describe-security-groups \
                                 --filters Name=group-name,Values=netflix-static-sg \
                                 --query 'SecurityGroups[0].GroupId' \
@@ -271,7 +260,6 @@ print('✅ Container definition JSON is valid')
                             --services ${ecsService} \
                             --region ${awsRegion}
 
-                        # Print the public IP of the running task
                         TASK_ARN=\$(aws ecs list-tasks \
                             --cluster ${ecsCluster} \
                             --service-name ${ecsService} \
@@ -297,25 +285,83 @@ print('✅ Container definition JSON is valid')
                 }
             }
         }
-    }
 
-stage('Approval') {
-    steps {
-        echo "🎬 App is deployed — review it before cleanup."
-        timeout(time: 30, unit: 'MINUTES') {
-            input(
-                message: 'Pipeline complete. Approve to finish and clean up?',
-                ok: 'Yes, clean up',
-                submitter: 'admin',          // remove this line to allow anyone to approve
-                parameters: [
-                    choice(
-                        name: 'ACTION',
-                        choices: ['Approve', 'Rollback'],
-                        description: 'Approve to keep deployment, Rollback to revert'
-                    )
-                ]
-            )
+        stage('Approval') {                         // ← now INSIDE stages {}
+            steps {
+                script {
+                    echo "🎬 App is deployed — review it before cleanup."
+
+                    def userInput = timeout(time: 30, unit: 'MINUTES') {
+                        input(
+                            message: '🎬 Netflix app is live! Approve to finalize?',
+                            ok: 'Approve & Clean Up',
+                            parameters: [
+                                choice(
+                                    name: 'ACTION',
+                                    choices: ['Approve', 'Rollback'],
+                                    description: 'Approve to keep this deployment, Rollback to revert'
+                                ),
+                                string(
+                                    name: 'NOTES',
+                                    defaultValue: '',
+                                    description: 'Optional notes about this deployment'
+                                )
+                            ]
+                        )
+                    }
+
+                    if (userInput['ACTION'] == 'Rollback') {
+                        echo "⏪ Rollback requested — reverting to previous task definition..."
+                        sh """
+                            PREV_TASK_DEF=\$(aws ecs list-task-definitions \
+                                --family-prefix ${TASK_FAMILY} \
+                                --sort DESC \
+                                --region ${AWS_REGION} \
+                                --query 'taskDefinitionArns[1]' \
+                                --output text)
+
+                            echo "Rolling back to: \$PREV_TASK_DEF"
+
+                            aws ecs update-service \
+                                --cluster ${ECS_CLUSTER} \
+                                --service ${ECS_SERVICE} \
+                                --task-definition \$PREV_TASK_DEF \
+                                --force-new-deployment \
+                                --region ${AWS_REGION}
+
+                            aws ecs wait services-stable \
+                                --cluster ${ECS_CLUSTER} \
+                                --services ${ECS_SERVICE} \
+                                --region ${AWS_REGION}
+
+                            echo "✅ Rollback complete!"
+                        """
+                        error("Deployment rolled back: ${userInput['NOTES'] ?: 'user request'}")
+                    } else {
+                        echo "✅ Deployment approved! Notes: ${userInput['NOTES'] ?: 'none'}"
+                    }
+                }
+            }
+        }
+
+    }   // ← closes stages {}
+
+    post {
+        success {
+            echo "🎬 Pipeline complete! Image: ${IMAGE_URI}"
+        }
+        failure {
+            echo "❌ Pipeline failed or was rolled back."
+        }
+        always {
+            sh '''
+                aws configure set aws_access_key_id     ""
+                aws configure set aws_secret_access_key ""
+                aws configure set aws_session_token     ""
+            '''
+            sh 'docker image prune -f'
+            cleanWs()
         }
     }
-}
-}
+
+}   // ← closes pipeline {}
