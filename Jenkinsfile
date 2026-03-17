@@ -299,21 +299,23 @@ print('✅ Container definition JSON is valid')
         }
     }
 
-    post {
-        success {
-            echo "✅ Pipeline complete! Image: ${IMAGE_URI}"
-        }
-        failure {
-            echo "❌ Pipeline failed — check logs above."
-        }
-        always {
-            sh '''
-                aws configure set aws_access_key_id     ""
-                aws configure set aws_secret_access_key ""
-                aws configure set aws_session_token     ""
-            '''
-            sh 'docker image prune -f'
-            cleanWs()
+
+stage('Approval') {
+    steps {
+        echo "🎬 App is deployed — review it before cleanup."
+        timeout(time: 30, unit: 'MINUTES') {
+            input(
+                message: 'Pipeline complete. Approve to finish and clean up?',
+                ok: 'Yes, clean up',
+            ##  submitter: 'admin',          // remove this line to allow anyone to approve
+                parameters: [
+                    choice(
+                        name: 'ACTION',
+                        choices: ['Approve', 'Rollback'],
+                        description: 'Approve to keep deployment, Rollback to revert'
+                    )
+                ]
+            )
         }
     }
 }
