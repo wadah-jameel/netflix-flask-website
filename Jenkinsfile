@@ -133,25 +133,18 @@ pipeline {
                                     "name": "FLASK_ENV",
                                     "value": "production"
                                 }
-                            ],
+                            ]
+
                             "healthCheck": {
                                 "command": [
                                     "CMD-SHELL",
-                                    "curl -f http://localhost:5000/health || exit 1"
+                                    "python3 -c \"import urllib.request; urllib.request.urlopen('http://localhost:5000/health')\" || exit 1"
                                 ],
                                 "interval": 30,
                                 "timeout": 5,
                                 "retries": 3,
                                 "startPeriod": 15
                             },
-                            "logConfiguration": {
-                                "logDriver": "awslogs",
-                                "options": {
-                                    "awslogs-group": "/ecs/${taskFamily}",
-                                    "awslogs-region": "${awsRegion}",
-                                    "awslogs-stream-prefix": "ecs"
-                                }
-                            }
                         }
                     ]"""
 
@@ -292,7 +285,7 @@ print('✅ Container definition JSON is valid')
             }
         }
 
-        stage('Approval') {                         // ← now INSIDE stages {}
+        stage('Approval') {                         
             steps {
                 script {
                     echo "🎬 App is deployed — review it before cleanup."
