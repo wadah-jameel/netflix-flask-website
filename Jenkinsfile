@@ -299,7 +299,6 @@ print('✅ Container definition JSON is valid')
         }
     }
 
-
 stage('Approval') {
     steps {
         echo "🎬 App is deployed — review it before cleanup."
@@ -307,7 +306,7 @@ stage('Approval') {
             input(
                 message: 'Pipeline complete. Approve to finish and clean up?',
                 ok: 'Yes, clean up',
-            ##  submitter: 'admin',          // remove this line to allow anyone to approve
+                submitter: 'admin',          // remove this line to allow anyone to approve
                 parameters: [
                     choice(
                         name: 'ACTION',
