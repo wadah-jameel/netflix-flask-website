@@ -71,7 +71,13 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 echo "🐳 Building ${IMAGE_URI}"
-                sh "docker buildx build --platform linux/amd64 -t ${IMAGE_URI} --load ."
+                sh """
+                    docker buildx build \
+                        --platform linux/amd64 \
+                        --no-cache \
+                        -t ${IMAGE_URI} \
+                        --load .
+                """
             }
         }
 
