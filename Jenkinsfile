@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         AWS_REGION     = 'us-east-1'
-        AWS_ACCOUNT_ID = '977305320020'
+        AWS_ACCOUNT_ID = '${AWS_ACCOUNT_ID}'
         ECR_REGISTRY   = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
         ECR_REPO       = 'netflix-static'
         IMAGE_TAG      = "${env.GIT_COMMIT?.take(7) ?: 'latest'}"
